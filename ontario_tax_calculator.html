@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>安省税后工资计算器</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px;
+      max-width: 700px;
+      margin: auto;
+      background: #f9f9f9;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    label {
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    input, select, button {
+      display: block;
+      margin-bottom: 15px;
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .result, .deductions {
+      margin-top: 20px;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <h1>安省税后工资计算器</h1>
+
+  <label for="incomeType">选择工资类型：</label>
+  <select id="incomeType">
+    <option value="hourly">简单时薪计算器</option>
+    <option value="weekly">周薪</option>
+    <option value="biweekly">两周薪</option>
+    <option value="monthly">月薪</option>
+    <option value="annual">年薪</option>
+  </select>
+
+  <div id="wageInput">
+    <label for="wage">工资金额：</label>
+    <input type="number" id="wage" placeholder="如果有固定工资，请填写" />
+  </div>
+
+  <div id="hoursInput">
+    <label for="hours">工作小时数：</label>
+    <input type="number" id="hours" placeholder="请输入工作小时数" />
+  </div>
+
+  <div id="rateInput">
+    <label for="rate">时薪（用于计算）：</label>
+    <input type="number" id="rate" placeholder="请输入时薪" />
+  </div>
+
+  <button onclick="calculateTax()">计算税后收入</button>
+
+  <div class="result" id="result" style="display:none"></div>
+
+  <script>
+    const incomeTypeSelect = document.getElementById("incomeType");
+    const wageInput = document.getElementById("wageInput");
+    const wageField = document.getElementById("wage");
+
+    incomeTypeSelect.addEventListener("change", () => {
+      const selected = incomeTypeSelect.value;
+      if (selected === "hourly") {
+        wageInput.style.display = "none";
+        wageField.value = "";
+      } else {
+        wageInput.style.display = "block";
+      }
+    });
+
+    function calculateTax() {
+      const incomeType = document.getElementById("incomeType").value;
+      const wage = parseFloat(document.getElementById("wage").value);
+      const hours = parseFloat(document.getElementById("hours").value);
+      const rate = parseFloat(document.getElementById("rate").value);
+
+      const CPP_RATE = 0.0595;
+      const EI_RATE = 0.0166;
+      const FEDERAL_BRACKET = 55867;
+      const PROVINCIAL_BRACKET = 51446;
+
+      let annualIncome = 0;
+
+      if (incomeType === "hourly") {
+        if (!rate || !hours) return alert("请输入时薪和工作小时数");
+        annualIncome = rate * hours * 26;
+      } else {
+        if (!isNaN(wage)) {
+          if (incomeType === "weekly") annualIncome = wage * 52;
+          else if (incomeType === "biweekly") annualIncome = wage * 26;
+          else if (incomeType === "monthly") annualIncome = wage * 12;
+          else if (incomeType === "annual") annualIncome = wage;
+        } else if (!isNaN(rate) && !isNaN(hours)) {
+          if (incomeType === "weekly") annualIncome = rate * hours * 52;
+          else if (incomeType === "biweekly") annualIncome = rate * hours * 26;
+          else if (incomeType === "monthly") annualIncome = rate * hours * 12;
+          else if (incomeType === "annual") annualIncome = rate * hours;
+        } else {
+          return alert("请填写工资金额，或同时填写工作小时数与时薪");
+        }
+      }
+
+      let federalTax = annualIncome > 15000 ? Math.min(annualIncome, FEDERAL_BRACKET) * 0.15 : 0;
+      let provincialTax = annualIncome > 11500 ? Math.min(annualIncome, PROVINCIAL_BRACKET) * 0.0505 : 0;
+      let cpp = annualIncome > 3500 ? Math.min(annualIncome - 3500, 68500 - 3500) * CPP_RATE : 0;
+      let ei = annualIncome > 2000 ? Math.min(annualIncome, 63200) * EI_RATE : 0;
+
+      const totalDeductions = federalTax + provincialTax + cpp + ei;
+      const netAnnual = annualIncome - totalDeductions;
+      const netMonthly = netAnnual / 12;
+      const netWeekly = netAnnual / 52;
+      const netBiweekly = netAnnual / 26;
+
+      document.getElementById("result").style.display = "block";
+      document.getElementById("result").innerHTML = `
+        <h3>税后收入：</h3>
+        <p>年收入（税后）：$${netAnnual.toFixed(2)}</p>
+        <p>月收入（税后）：$${netMonthly.toFixed(2)}</p>
+        <p>两周收入（税后）：$${netBiweekly.toFixed(2)}</p>
+        <p>每周收入（税后）：$${netWeekly.toFixed(2)}</p>
+        <div class="deductions">
+          <h4>扣税明细：</h4>
+          <p>联邦税：$${federalTax.toFixed(2)}</p>
+          <p>省税：$${provincialTax.toFixed(2)}</p>
+          <p>CPP：$${cpp.toFixed(2)}</p>
+          <p>EI：$${ei.toFixed(2)}</p>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>
